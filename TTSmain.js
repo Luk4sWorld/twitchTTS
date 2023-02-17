@@ -81,7 +81,7 @@ function kickstartPlayer() {
 }
 
 function skipAudio() {
-  if(!audio.paused) return console.error("skipped player while running");
+  if(audio.paused) return console.error("skipped player while paused");
   if(audioqueue.isEmpty()) {
     isPlaying = false;
     audio.pause();
