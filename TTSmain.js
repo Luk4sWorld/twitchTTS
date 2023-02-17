@@ -1,4 +1,4 @@
-var audio, chatbox, button, channelInput, audioqueue, isPlaying, add, client;
+var audio, chatbox, button, channelInput, audioqueue, isPlaying, add, client, skip;
 
 const DEFAULT_VOICE = 'Brian';
 const DEFAULT_VOICE_FEM = 'Joanna';
@@ -80,6 +80,19 @@ function kickstartPlayer() {
   audio.play();
 }
 
+function skipAudio() {
+  if(!audio.paused) return console.error("skipped player while running");
+  if(audioqueue.isEmpty()) {
+    isPlaying = false;
+    audio.pause();
+  } else {
+    isPlaying = true;
+    audio.src = audioqueue.dequeue();
+    audio.load();
+    audio.play();
+  }
+}
+
 async function fetchAudio(txt, customVoice) {
   const resp = await fetch(TTS_API_ENDPOINT + makeParameters({voice:customVoice||DEFAULT_VOICE, text:txt}));
   if(resp.status != 200) return console.error("bad Message");
@@ -141,20 +154,26 @@ async function onMessage(channel, tags, msg, self) {
 async function changeChannel() {
   const newChannel = channelInput.value;
   window.location.hash = '#' + newChannel;
-  client.getChannels()
-    .forEach(async oldChannel => await client.part(oldChannel) );
-  return client.join(newChannel).then(l=>console.log('joined channel',l[0]));
+  return Promise.all(client.getChannels()
+    .map(oldChannel => client.part(oldChannel))
+  ).then(()=>
+    client.join(newChannel)
+  ).then(l=>
+    console.log('joined channel',l[0])
+  );
 }
 
 window.onload = async function () {
   audio         = document.getElementById("audio");
   chatbox       = document.getElementById("chatbox");
   button        = document.getElementById("channel-button");
+  skip          = document.getElementById("skip-button");
   channelInput  = document.getElementById("channel");
   isPlaying = false;
   add = (DESCENDING ? chatbox.prepend : chatbox.append).bind(chatbox);
   audioqueue = new Queue();
   button.onclick = changeChannel;
+  skip.onclick = skipAudio;
   document.addEventListener("keyup", ({key}) => {
     if(key == "Enter") changeChannel();
   });
